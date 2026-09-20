@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CV workshop</title>
+<style>
+:root{
+  --paper:#ffffff;
+  --desk:#d8d5cd;
+  --rail:#efece5;
+  --ink:#16161a;
+  --pencil:#6d6862;
+  --hair:#c9c5bc;
+  --redpen:#a01f28;
+  --bluepencil:#27466e;
+  --keep:#4a5a4c;
+  --cv-font:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --note-font:Georgia,"Iowan Old Style","Palatino Linotype",Palatino,serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--desk);
+  color:var(--ink);
+  font-family:var(--note-font);
+  font-size:16px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- toolbar ---------- */
+.bar{
+  position:sticky;top:0;z-index:50;
+  background:#faf9f6;
+  border-bottom:1px solid var(--hair);
+  padding:10px 20px;
+  display:flex;flex-wrap:wrap;gap:14px 22px;align-items:center;
+}
+.bar h1{
+  font-size:15px;font-weight:normal;margin:0;letter-spacing:.01em;
+  padding-right:18px;border-right:1px solid var(--hair);
+}
+.bar h1 em{font-style:normal;color:var(--pencil)}
+.seg{display:flex;border:1px solid var(--hair);border-radius:2px;overflow:hidden;background:#fff}
+.seg button{
+  font-family:var(--note-font);font-size:13.5px;
+  padding:6px 13px;border:0;background:transparent;color:var(--pencil);cursor:pointer;
+}
+.seg button+button{border-left:1px solid var(--hair)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.seg button:focus-visible{outline:2px solid var(--bluepencil);outline-offset:-2px}
+.tools{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+.tools button,.tools label{
+  font-family:var(--note-font);font-size:13.5px;
+  padding:6px 12px;border:1px solid var(--hair);background:#fff;color:var(--ink);
+  border-radius:2px;cursor:pointer;
+}
+.tools button:hover,.tools label:hover{background:#f2efe8}
+.tools .primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tools input[type=file]{display:none}
+.count{font-size:13.5px;color:var(--pencil)}
+.count b{color:var(--redpen);font-weight:normal;font-variant-numeric:tabular-nums}
+.count.done b{color:var(--keep)}
+#fit{padding-left:16px;border-left:1px solid var(--hair);font-style:italic}
+#fit:empty,#count:empty{display:none}
+#fit.over{color:var(--redpen);font-style:normal}
+
+/* ---------- notice ---------- */
+.hint{
+  background:#fdf6e3;border-bottom:1px solid #e0d5b0;
+  padding:13px 24px;font-size:14.5px;line-height:1.5;
+}
+.hint p{margin:0 0 9px;max-width:74ch;color:#4a4230}
+.hint b{font-weight:700}
+.hintacts{display:flex;gap:8px;flex-wrap:wrap}
+.hint button{
+  font-family:var(--note-font);font-size:13.5px;
+  padding:6px 13px;border:1px solid #cfc3a0;background:#fff;border-radius:2px;cursor:pointer;
+}
+.hint button:hover{background:#f6efd8}
+#hint-dl{background:var(--ink);color:#fff;border-color:var(--ink)}
+@media print{.hint{display:none !important}}
+
+/* ---------- layout ---------- */
+.stage{
+  display:grid;
+  grid-template-columns:210mm minmax(340px,560px);
+  justify-content:center;
+  gap:0 30px;
+  max-width:1700px;
+  margin:0 auto;
+  padding:26px 24px 80px;
+  align-items:start;
+}
+.sheet{
+  background:var(--paper);
+  width:100%;
+  padding:16mm 15mm;
+  box-shadow:0 1px 0 rgba(0,0,0,.10),0 10px 34px rgba(0,0,0,.13);
+  font-family:var(--cv-font);
+  font-size:var(--cvsize,10.4pt);
+  line-height:1.34;
+  color:var(--ink);
+}
+.sheet.measuring{width:210mm;padding:11mm 12mm;box-shadow:none;min-height:0}
+.rail{position:relative}
+
+/* ---------- the CV ---------- */
+.cvname{
+  font-size:1.95em;font-weight:700;letter-spacing:.055em;margin:0 0 3px;
+}
+.cvcontact{font-size:.83em;color:#54514c;margin:0 0 16px}
+.sec{
+  font-size:.81em;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  margin:16px 0 5px;padding-bottom:3px;border-bottom:1px solid #9b978f;
+}
+.sec:first-of-type{margin-top:0}
+.blk{margin:9px 0 0;position:relative}
+.blkhead{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.blkhead .who{font-weight:700}
+.blkhead .role{font-weight:400}
+.blkhead .when{font-size:.85em;color:#5c5852;white-space:nowrap;flex-shrink:0}
+ul.bl{margin:2px 0 0;padding:0 0 0 15px;list-style:none}
+ul.bl>li{position:relative;margin:1.5px 0}
+ul.bl>li::before{content:"•";position:absolute;left:-12px;color:#3d3a36}
+.runon{font-size:.89em;color:#4a4741;margin:6px 0 0}
+.origloc{font-size:.88em;color:#5c5852;margin:0 0 1px}
+
+/* ---------- markup affordances (workshop only) ---------- */
+.mk{cursor:default}
+body:not([data-mode="workshop"]) .wsonly{display:none !important}
+/* Finished CV mode is a literal page preview: same geometry as print */
+/* Workshop and Original are working views: wide, and set at a size you can
+   actually read on a shared screen. Only Finished CV is true A4. */
+body[data-mode="workshop"] .stage{
+  /* proportional, so the document always keeps the larger share */
+  grid-template-columns:minmax(0,1fr) minmax(340px,0.62fr);
+  max-width:1820px;
+  padding-left:18px;padding-right:18px;
+}
+body[data-mode="workshop"] .sheet,
+body[data-mode="orig"] .sheet{
+  width:auto;max-width:none;padding:30px 34px;font-size:12pt;
+}
+body[data-mode="orig"] .stage{
+  grid-template-columns:minmax(0,1030px);max-width:none;
+}
+body[data-mode="cv"] .sheet{font-size:var(--cvsize,10pt)}
+
+body[data-mode="cv"] .rail,body[data-mode="orig"] .rail{display:none}
+body[data-mode="cv"] .stage,body[data-mode="orig"] .stage{
+  grid-template-columns:210mm;justify-content:center;max-width:none;
+}
+body[data-mode="cv"] .sheet{width:210mm;padding:11mm 12mm;margin:0 auto}
+.li-write{padding:0}
+.li-write::before{content:"" !important}
+.prompt{
+  font-family:var(--note-font);font-size:13.5px;line-height:1.45;
+  background:#f4f6fa;border-left:3px solid var(--bluepencil);
+  padding:9px 12px;margin:5px 0 4px;color:#22303f;
+}
+.prompt strong{font-weight:normal;color:var(--bluepencil)}
+.writein{
+  display:block;width:100%;min-height:2.6em;
+  font-family:var(--cv-font);font-size:var(--cvsize,10.4pt);line-height:1.34;
+  border:1px dashed var(--bluepencil);background:#fcfdff;
+  padding:5px 7px;margin:0;resize:vertical;color:var(--ink);
+}
+.writein:focus{outline:2px solid var(--bluepencil);outline-offset:1px;background:#fff}
+.drop{
+  font-family:var(--note-font);font-size:15px;line-height:1;
+  background:none;border:0;color:#b8b3aa;cursor:pointer;
+  padding:0 3px;margin-left:4px;vertical-align:1px;
+}
+.drop:hover{color:var(--redpen)}
+.drop:focus-visible{outline:2px solid var(--redpen);outline-offset:1px}
+li.dropped>*:not(.drop),li.dropped,.runon.dropped{color:#b0aba3}
+li.dropped,.runon.dropped{text-decoration:line-through;text-decoration-color:var(--redpen)}
+.runon.dropped .drop{color:var(--redpen);text-decoration:none}
+.blk.dropped .blkhead,.blk.dropped ul{text-decoration:line-through;text-decoration-color:var(--redpen);opacity:.42}
+li.dropped .blank{background:transparent;border-bottom-color:#ccc7bf;color:#b0aba3}
+li.dropped .prompt,li.dropped .writein,li.dropped .was{display:none}
+.blk.dropped .drop,li.dropped .drop{color:var(--redpen)}
+.blk.dropped .wastoggle,.blk.dropped li .drop,.blk.dropped .prompt,
+.blk.dropped .writein,.blk.dropped .was{display:none !important}
+body[data-mode="cv"] .dropped{display:none !important}
+.written{display:none}
+body[data-mode="cv"] .written{display:inline}
+body[data-mode="cv"] .li-write{padding-left:0}
+body[data-mode="cv"] .li-write::before{content:"•" !important;position:absolute;left:-12px;color:#3d3a36}
+body[data-mode="cv"] .li-write.empty{display:none}
+.was,.quote{
+  font-family:var(--note-font);font-size:13.5px;font-style:italic;color:#6a635b;
+  margin:4px 0 3px;padding-left:11px;border-left:3px solid #ccc6bc;
+}
+.quote{margin:0 0 8px}
+.wastoggle{
+  font-family:var(--note-font);font-size:11.5px;color:var(--pencil);
+  background:none;border:0;border-bottom:1px dotted var(--pencil);
+  padding:0;margin-left:5px;cursor:pointer;vertical-align:1px;
+}
+.wastoggle:hover{color:var(--redpen);border-color:var(--redpen)}
+
+/* blanks */
+.blank{
+  display:inline-block;min-width:3.4em;
+  border-bottom:1.5px solid var(--bluepencil);
+  background:#f4f6fa;
+  padding:0 3px;margin:0 1px;
+  font-family:var(--cv-font);
+  color:var(--bluepencil);font-weight:600;
+  outline:none;white-space:pre-wrap;
+}
+.blank:empty::before{content:attr(data-ph);color:#8e9aa8;font-weight:400}
+.blank:focus{background:#e8eef7;box-shadow:0 0 0 2px var(--bluepencil)}
+.blank.filled{color:var(--ink);font-weight:400;background:#eef4ea;border-bottom-color:#8aa78c}
+body[data-mode="cv"] .blank{
+  background:transparent;color:var(--ink);font-weight:400;border-bottom:0;
+  padding:0;margin:0;min-width:0;
+}
+body[data-mode="cv"] .blank:empty{border-bottom:1px solid var(--ink);min-width:4em}
+body[data-mode="cv"] .blank:empty::before{content:""}
+
+/* linked highlight */
+.blk.lit,li.lit{background:#fff8dc;box-shadow:0 0 0 4px #fff8dc}
+.note.lit{background:#fff8dc}
+
+/* ---------- margin notes ---------- */
+.note{
+  position:relative;font-size:15px;line-height:1.52;
+  margin:0 0 11px;padding:11px 15px 12px;
+  border-left:6px solid var(--hair);cursor:pointer;
+}
+.note h4{font-size:15px;font-weight:700;margin:0 0 3px;letter-spacing:.005em}
+.note p{margin:0;color:#332f2a}
+.note.cut{border-left-color:var(--redpen);background:#faeeee}
+.note.cut h4{color:#8a1a22}
+.note.fill{border-left-color:var(--bluepencil);background:#eef2f9}
+.note.fill h4{color:#1f3a5c}
+.note.keep{border-left-color:var(--keep);background:#eef3ee}
+.note.keep h4{color:#334635}
+.note.lit{outline:2px solid #c9a227;outline-offset:-2px}
+.railhead{font-size:14px;color:var(--pencil);font-style:italic;margin:0 0 12px}
+.standard{
+  background:#f3f1ec;border:1px solid var(--hair);border-left:6px solid var(--ink);
+  padding:12px 15px;margin:0 0 14px;font-size:14.5px;line-height:1.5;
+}
+.standard h4{font-size:15px;font-weight:700;margin:0 0 5px}
+.standard ol{margin:0;padding-left:19px}
+.standard li{margin:2px 0}
+.standard p{margin:7px 0 0;color:#4a443c}
+.legend{display:flex;flex-wrap:wrap;gap:6px 10px;margin:0 0 16px;font-size:13.5px}
+.legend span{padding:3px 10px;border-left:5px solid}
+.legend .c{border-color:var(--redpen);background:#faeeee;color:#8a1a22}
+.legend .f{border-color:var(--bluepencil);background:#eef2f9;color:#1f3a5c}
+.legend .k{border-color:var(--keep);background:#eef3ee;color:#334635}
+
+
+/* ---------- print ---------- */
+@page{size:A4;margin:0}
+@media print{
+  body{background:#fff}
+  .bar,.rail,.wsonly,.wastoggle,.was,.prompt,.writein,.drop,.dropped{display:none !important}
+  .stage{display:block;padding:0}
+  .sheet{
+    box-shadow:none;width:210mm;max-width:none;min-height:0;
+    padding:11mm 12mm;font-size:var(--cvsize,10pt) !important;
+  }
+  .written{display:inline !important}
+  .li-write.empty{display:none !important}
+  .li-write{padding-left:0}
+  .blk,li,.sec{break-inside:avoid}
+  .blk.lit,li.lit,.note.lit{background:transparent;box-shadow:none}
+  .blank{background:transparent !important;color:#000 !important;font-weight:400 !important;
+    border-bottom:0 !important;padding:0 !important;margin:0 !important;min-width:0 !important}
+  .blank:empty{border-bottom:1px solid #000 !important;min-width:4em !important}
+  .li-write{padding-left:0}
+  .li-write::before{content:"•" !important;position:absolute;left:-12px;color:#3d3a36}
+}
+
+@media (max-width:1100px){
+  .stage,
+  body[data-mode="workshop"] .stage,
+  body[data-mode="orig"] .stage{
+    grid-template-columns:minmax(0,1fr);
+    padding:16px 12px 60px;
+  }
+  .rail{padding:22px 0 0;margin-top:8px;border-top:1px solid var(--hair)}
+  .rail::before{display:none}
+  .note::after{display:none}
+  .sheet{padding:22px 20px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body data-mode="workshop">
+
+<div class="bar">
+  <h1>CV workshop <em id="who"></em></h1>
+
+  <div class="seg" role="group" aria-label="View">
+    <button id="m-orig" aria-pressed="false">Original</button>
+    <button id="m-ws" aria-pressed="true">Workshop</button>
+    <button id="m-cv" aria-pressed="false">Finished CV</button>
+  </div>
+
+  <div class="seg" role="group" aria-label="Version" id="vseg"></div>
+
+  <span class="count" id="count"></span>
+  <span class="count" id="fit"></span>
+
+  <div class="tools">
+    <button id="save">Save my work</button>
+    <button class="primary" id="print" title="In the print dialogue choose Margins: None and Scale 100% — the page sets its own margins.">Export PDF</button>
+  </div>
+</div>
+
+<div class="hint" id="hint" hidden>
+  <p id="hintmsg"></p>
+  <div class="hintacts">
+    <button id="hint-dl">Save a copy I can print from</button>
+    <button id="hint-x">Dismiss</button>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="sheet" id="sheet" aria-label="Curriculum vitae"></div>
+  <aside class="rail" id="rail" aria-label="Notes"></aside>
+</div>
+
+<script>
+/* ============================================================
+   CONTENT
+   b()  = a bullet Bruce keeps or that has been rewritten
+   w()  = a bullet she writes herself in the session or after
+   Text may contain {{key|placeholder}} which becomes an editable blank.
+   ============================================================ */
+
+/* ==================================================================
+   CONTENT BLOCK. Everything from here to "CONTENT BLOCK ENDS" is one
+   candidate. Replace it wholesale; the machinery below is generic.
+   Schema and rules: references/content-schema.md
+   ================================================================== */
+
+const CANDIDATE = {
+  name: 'Zuyuan (Bruce) Zhang',
+  contact: '(+44) <span class="blank" contenteditable="true" spellcheck="false" data-key="phone" data-ph="0000 000000"></span> &nbsp;\u00b7&nbsp; zuyuan.zhang@exeter.ox.ac.uk &nbsp;\u00b7&nbsp; Oxford &nbsp;\u00b7&nbsp; linkedin.com/in/<span class="blank" contenteditable="true" spellcheck="false" data-key="li" data-ph="your-handle"></span>'
+};
+
+/* one firm type, so the version toggle hides itself */
+const C = 'consulting';
+
+const blocks = {
+
+  oxford: {
+    who:'University of Oxford, Exeter College', role:' \u2014 MEng Engineering Science',
+    when:'Oct 2025 \u2013 Jun 2029',
+    note:{t:'fill', h:'Your start date is missing, and it is the most consequential line here', p:'On a four-year MEng finishing June 2029, your penultimate year is 2027\u201328 \u2014 so the penultimate-year summer internship is 2028, not 2027. Showing the range means a recruiter checking eligibility does not have to work it out.'},
+    bullets:[
+      {mode:'b', text:'First-year examinations (Prelims): Distinction',
+       note:{t:'keep', h:'This clears the academic bar on its own', p:'BCG London asks for a minimum 2:1 or equivalent and McKinsey London has required AAB at A-level just to attend an event. A Prelims Distinction answers both without argument, so it goes first in this section.'}},
+      {mode:'b', text:'Coursework: calculus, linear algebra, Fourier analysis, digital systems, programming in MATLAB',
+       was:'Relevant Courses: Calculus, Linear Algebra, Fourier Analysis, Programming (MATLAB), Digital Systems',
+       note:{t:'cut', h:'If it stays, it should say something the degree title does not', p:'A strategy screener reads "MEng Engineering Science" and already assumes the maths. The line only earns space if a course genuinely surprises them, and none of these will.'},
+       cutNote:{h:'Cut \u2014 it tells a consulting reader nothing', p:'Every Oxford engineer has done linear algebra; the degree title already says so. Cutting it buys back the line you need for a consequence clause further down, where it changes how you are read.'}}
+    ]
+  },
+
+  guanghua: {
+    who:'Guanghua Cambridge International School', role:' \u2014 A-Levels, Shanghai',
+    when:'Feb 2023 \u2013 Jun 2025',
+    note:{t:'fill', h:'Check what UK forms will ask for below A-level', p:'Bain London says international qualifications are fine but that you should give as much detail as possible and that some education fields are mandatory. Find out now what your pre-A-level qualification maps to, so you are not inventing an answer at 11pm on a deadline.'},
+    bullets:[
+      {mode:'b', text:'A-Levels: Mathematics A*, Further Mathematics A*, Physics A*, Chemistry A',
+       was:'A-level: Mathematics (A*), Further Mathematics (A*), Physics (A*), Chemistry (A)',
+       note:{t:'keep', h:'Grades next to subjects \u2014 keep doing this', p:'UK consulting screens filter here, and subjects listed without grades make a reader assume the worst. Yours are strong, so the only change is dropping the brackets to save space.'}},
+      {mode:'b', text:'BPhO Round 1: Top Gold; AAPT PhysicsBowl: global top 100 (2024)',
+       was:'Competitions: BPhO Round 1 \u2013 Top Gold (2024); AAPT PhysicsBowl \u2013 Global Top 100 (2024)',
+       note:{t:'keep', h:'Ranked against a field, which is rare on a student CV', p:'"Global top 100" is the kind of line that survives a six-second scan because it is a percentile, not a participation record. Keep it to one line and drop the word "Competitions".'}},
+      {mode:'b', text:'ESAT 8.9 / 9.0 / 8.9; Oxford PAT 87/100',
+       was:'ESAT (Engineering and Science Admissions Test): 8.9/9.0/8.9 (out of 9.0); Oxford PAT: 87/100',
+       note:{t:'cut', h:'If you keep them, compress to one short line', p:'Spelling out "Engineering and Science Admissions Test" costs half a line to explain a test the reader will not weigh. The numbers alone are the most these deserve.'},
+       cutNote:{h:'Cut \u2014 superseded by the Distinction above', p:'Admissions tests got you into Oxford; a Prelims Distinction now proves the same thing more recently and more credibly. On a second-year CV they read as someone still trading on school.'}}
+    ]
+  },
+
+  citic: {
+    who:'CITIC Securities', role:' \u2014 Summer Intern, Investment Banking (Healthcare), Shanghai',
+    when:'Jun \u2013 Aug 2026',
+    note:{t:'keep', h:'The most relevant experience you have \u2014 it stays at the top', p:'Diligence, forecasting and quality control on live transactions is close to what a first-year consultant actually does. The work is strong; what is missing, in almost every bullet, is what happened next.'},
+    bullets:[
+      {mode:'w', quote:'Attended management due diligence interviews for a listed oncology diagnostics company and drafted formal interview records; identified discrepancies between management statements and public disclosures, which were corrected after follow-up',
+       prompt:'<strong>You open your single most relevant bullet with the word "Attended", then bury the good part.</strong> You caught a listed company saying something that did not match its own filings. How many interviews, how many discrepancies, and who corrected what \u2014 the company, the disclosure, the deal team\u2019s model? Start with a verb you own and finish on what changed.',
+       ph:'Model: Drafted the formal record of six management diligence interviews at a listed oncology diagnostics company and checked it line by line against public filings, surfacing three inconsistencies in reported trial timelines that management corrected in its next disclosure.',
+       note:{t:'fill', h:'You write this one', p:'I have deliberately not drafted it. Bain London asks candidates to use AI only to check grammar and spelling on a CV, and a bullet somebody else wrote is one you cannot defend when an interviewer pushes on it.'}},
+      {mode:'w', quote:'Traced an ADC biotech\u2019s RMB 2.2bn fair-value loss to the liability classification of its convertible redeemable preferred shares, isolating ~RMB 0.4bn underlying operating loss; summarised findings in a research note',
+       prompt:'<strong>The best piece of analysis on your CV, ending on its weakest word.</strong> "Summarised findings in a research note" is a filing cabinet. You worked out that a headline loss was five times the real one \u2014 who needed to know, and what did they do differently once they did? Decide too whether "convertible redeemable preferred shares" survives for a generalist reader or becomes plain English.',
+       ph:'Model: Traced an ADC biotech\u2019s RMB 2.2bn reported loss to the accounting treatment of its preferred shares rather than its operations, isolating a RMB 0.4bn underlying operating loss and resetting the team\u2019s view of the company\u2019s real cash burn.',
+       note:{t:'fill', h:'You write this one', p:'This is the bullet most likely to start an interview conversation, which is exactly why the words have to be yours. Keep the two numbers \u2014 the gap between them is the whole point.'}},
+      {mode:'b', text:'Built the client-facing patient-funnel sales forecast for two oncology drugs, wrote the commentary on demand differences across the US, China and EU, and automated production of the {{slides|00}}-slide pack in Python',
+       was:'Built a client presentation of patient-funnel sales forecasts for two oncology drugs, writing commentary on key differences across the US, China and EU markets; automated slide production with Python',
+       note:{t:'cut', h:'"A presentation of forecasts" undersells building the forecast', p:'You built the model and wrote the interpretation; say so. The Python automation is a genuine efficiency but needs a number to land \u2014 a slide count turns a flourish into a fact.'}},
+      {mode:'b', text:'Quality-controlled an ADC biotech\u2019s IPO filing, checking AI-generated review output against primary clinical literature and peer prospectuses; flagged 10+ high-risk issues including misstated competitor trial progress, {{ipoFix|all amended before filing}}',
+       was:'Quality-controlled IPO filings for an ADC biotech, verifying AI-assisted checks against primary clinical literature and peer prospectuses; flagged 10+ high-risk issues, incl. misstated competitor trial progress',
+       note:{t:'fill', h:'Ten issues found, and then the sentence stops', p:'The reader wants to know whether anyone acted on them. "All amended before filing" or "the three material ones were corrected" both work; if you genuinely do not know, ask someone on the team rather than guessing.'},
+       cutNote:{h:'Cut \u2014 four bullets for ten weeks invites a question', p:'The more lines you show for one short internship, the easier a reader assumes the work was. This is the fourth-strongest of the four, so it is the one to lose if the page gets tight.'}}
+    ]
+  },
+
+  amec: {
+    who:'AMEC', role:' \u2014 Summer Intern, Semiconductor Equipment R&D, Shanghai',
+    when:'Jun \u2013 Aug 2025',
+    note:{t:'cut', h:'"D-RID Department" means nothing outside AMEC', p:'Nobody in London knows the department code, and most will not know AMEC is a listed semiconductor equipment maker either. One clause of context is worth more than the internal name.'},
+    bullets:[
+      {mode:'w', quote:'Modelled pipe fluid resistance and developed an LLM-assisted workflow to estimate optimal working parameters; corrected model errors and calibrated outputs, reducing required test samples by 70%',
+       prompt:'<strong>70% is the best engineering number you have, and the sentence around it is opaque.</strong> Optimal working parameters for what, and who was running those physical tests before you? Say what the workflow was built for, who used it after you left, and whether they kept it.',
+       ph:'Model: Built an LLM-assisted workflow to model pipe fluid resistance and predict optimal flow settings for etch chamber testing, calibrating it against measured results until the test engineers could cut physical samples by 70%.',
+       note:{t:'fill', h:'You write this one', p:'An engineering intern who built an AI-assisted tool and then validated it against real measurements is a genuinely distinctive thing to be. Right now the sentence hides it.'}},
+      {mode:'b', text:'Ran tensile tests to characterise aluminium alloy operating ranges, informing material selection for etch equipment',
+       was:'Conducted tensile tests to characterise aluminium alloy properties and operating ranges, informing material selection for etch equipment',
+       note:{t:'cut', h:'Needs a number if it stays', p:'How many alloys, how many samples, and did the material actually change as a result? Without one of those it describes a task any engineering intern is handed.'},
+       cutNote:{h:'Cut \u2014 the weakest bullet on the CV', p:'A verb and a vague outcome, no number and no reader. Readers average rather than add, so a bullet like this drags the 70% line above it down instead of topping it up.'}},
+      {mode:'b', text:'Designed and 3D-modelled a modular, detachable O-ring test rig that tests 10+ seals at once, averaging across them to establish per-unit leakage rates {{ringGain|00}}% more accurately than single-unit testing',
+       was:'Designed and 3D-modelled a modular, detachable O-ring test rig enabling 10+ O-rings to be tested simultaneously, averaging results to determine per-unit leakage rate with far greater accuracy',
+       note:{t:'fill', h:'"Far greater accuracy" is a claim an interviewer will test', p:'If you have the figure, put it in. If you do not, say what the rig replaced \u2014 testing one seal at a time \u2014 and drop the accuracy claim rather than defending a number you cannot produce.'}}
+    ]
+  },
+
+  oucs: {
+    who:'Oxford University Chinese Society', role:' \u2014 President',
+    when:'Mar 2026 \u2013 present',
+    note:{t:'keep', h:'Your strongest section, and it sits at the bottom of the page', p:'BCG London asks for an outstanding academic record plus evidence of excellence outside it \u2014 this is that half of the bar, and OCamp is the best bullet you have anywhere. Trimming Education above is what lifts it up the page.'},
+    bullets:[
+      {mode:'b', text:'Lead Oxford\u2019s largest Chinese student society: a 13-person committee, 300+ members and a full-year events programme',
+       was:'Lead Oxford\u2019s largest Chinese undergraduate society, directing a 13-member committee and serving a community of 300+ students',
+       note:{t:'keep', h:'A scope line, and it earns its place', p:'The reader needs the size of the thing you run before the numbers below mean anything. Keep it to one line and let the achievements do the rest.'}},
+      {mode:'b', text:'Ran OCamp 2026, a residential orientation programme for 130+ incoming students, on a ~\u00a380k budget \u2014 negotiated hotel and venue rates to ~50% of market and closed with a \u00a330k+ surplus',
+       was:'Delivered OCamp 2026 for 130+ students, managing a ~\u00a380k budget; negotiated hotel and venue contracts down to ~50% of market rates and closed with a \u00a330k+ surplus',
+       note:{t:'keep', h:'The best bullet on your CV \u2014 the only one carrying all four things', p:'Verb, numbers, counterparties, consequence. The one change is saying what OCamp is, because the name means nothing outside Oxford and a reader will not stop to wonder.'}},
+      {mode:'b', text:'Restructured sponsorship onto performance-based terms (guaranteed base plus bonus), securing \u00a370k+ from {{sponsorN|00}} partners \u2014 up 75% year on year',
+       was:'Secured \u00a370k+ in sponsorship, up 75% year-on-year, by introducing performance-based partnerships (guaranteed base plus bonus)',
+       note:{t:'cut', h:'Lead with the decision, not the total', p:'You changed how the deals were structured and revenue rose 75%; as written, the mechanism is an afterthought in brackets. Putting it first turns a fundraising figure into commercial judgement, which is what is being screened for.'}},
+      {mode:'b', text:'Co-hosted 5 careers, networking and cultural events for 200+ attendees with Oxford SU, the Cambridge Chinese Society and other Oxford Asian societies',
+       was:'Partnered with Oxford SU, Cambridge\u2019s Chinese student society (CCS) and other Oxford Asian societies to co-host 5 networking, careers and cultural events for 200+ attendees',
+       note:{t:'cut', h:'The weakest of your four \u2014 tighten it or lose it', p:'It repeats the "I run events" point the three lines above have already made, at more length. Keep it only if the cross-institution partnerships are themselves the point you want to make.'},
+       cutNote:{h:'Cut \u2014 a fourth events bullet adds nothing', p:'Three lines above already prove you run events at scale and with money at stake. The space is worth more spent on a consequence in the CITIC section.'}}
+    ]
+  }
+};
+
+const extras = {
+  consulting:[
+    'Languages: Mandarin (native), English (fluent). Technical: Python, MATLAB, Excel, PowerPoint.',
+    'Interests: Tennis (former club vice-president); video editing \u2014 produced a TikTok video with 1M+ views; British rock music (Suede).'
+  ]
+};
+
+const versions = {
+  consulting:{
+    label:'Strategy consulting',
+    targets:'For MBB London, Oliver Wyman, OC&amp;C, L.E.K., Kearney, EY-Parthenon, Strategy&amp;. One page: no London office publishes a hard limit, but McKinsey UK asks for one to two pages on its own programmes and you do not yet have two pages of material \u2014 a second page would read as padding.',
+    groups:[
+      {sec:'Education', ids:['oxford','guanghua']},
+      {sec:'Experience', ids:['citic','amec']},
+      {sec:'Leadership', ids:['oucs']},
+      {sec:'Additional', ids:[]}
+    ]
+  }
+};
+
+
+/* ------------------------------------------------------------
+   Bruce's CV exactly as submitted. This is the diagnostic baseline.
+   ------------------------------------------------------------ */
+const ORIGINAL = {
+  contact:'Exeter College, Turl Street, Oxford, OX1 3DP | zuyuan.zhang@exeter.ox.ac.uk',
+  sections:[
+    {sec:'EDUCATION', blocks:[
+      {blk:'oxford', l1:'University of Oxford, Exeter College', l2:'MEng Engineering Science \u2014 Oxford, UK', when:'Jun 2029 (Expected)',
+       bullets:['Relevant Courses: Calculus, Linear Algebra, Fourier Analysis, Programming (MATLAB), Digital Systems',
+                'First-Year Examinations (Prelims): Distinction']},
+      {blk:'guanghua', l1:'Guanghua Cambridge International School', l2:'A-Levels \u2014 Shanghai, China', when:'Feb 2023 \u2013 Jun 2025',
+       bullets:['A-level: Mathematics (A*), Further Mathematics (A*), Physics (A*), Chemistry (A)',
+                'Competitions: BPhO Round 1 \u2013 Top Gold (2024); AAPT PhysicsBowl \u2013 Global Top 100 (2024)',
+                'ESAT (Engineering and Science Admissions Test): 8.9/9.0/8.9 (out of 9.0); Oxford PAT: 87/100']}
+    ]},
+    {sec:'EXPERIENCE', blocks:[
+      {blk:'citic', l1:'CITIC Securities', l2:'Summer Intern, Investment Banking \u2013 Healthcare Team \u2014 Shanghai, China', when:'Jun \u2013 Aug 2026',
+       bullets:['Attended management due diligence interviews for a listed oncology diagnostics company and drafted formal interview records; identified discrepancies between management statements and public disclosures, which were corrected after follow-up',
+                'Traced an ADC biotech\u2019s RMB 2.2bn fair-value loss to the liability classification of its convertible redeemable preferred shares, isolating ~RMB 0.4bn underlying operating loss; summarised findings in a research note',
+                'Built a client presentation of patient-funnel sales forecasts for two oncology drugs, writing commentary on key differences across the US, China and EU markets; automated slide production with Python',
+                'Quality-controlled IPO filings for an ADC biotech, verifying AI-assisted checks against primary clinical literature and peer prospectuses; flagged 10+ high-risk issues, incl. misstated competitor trial progress']},
+      {blk:'amec', l1:'Advanced Micro-Fabrication Equipment Inc. China (AMEC)', l2:'Summer Intern, D-RID Department \u2014 Shanghai, China', when:'Jun \u2013 Aug 2025',
+       bullets:['Modelled pipe fluid resistance and developed an LLM-assisted workflow to estimate optimal working parameters; corrected model errors and calibrated outputs, reducing required test samples by 70%',
+                'Conducted tensile tests to characterise aluminium alloy properties and operating ranges, informing material selection for etch equipment',
+                'Designed and 3D-modelled a modular, detachable O-ring test rig enabling 10+ O-rings to be tested simultaneously, averaging results to determine per-unit leakage rate with far greater accuracy']}
+    ]},
+    {sec:'LEADERSHIP', blocks:[
+      {blk:'oucs', l1:'Oxford University Chinese Society (OUCS)', l2:'President \u2014 Oxford, UK', when:'Mar 2026 \u2013 Present',
+       bullets:['Lead Oxford\u2019s largest Chinese undergraduate society, directing a 13-member committee and serving a community of 300+ students',
+                'Delivered OCamp 2026 for 130+ students, managing a ~\u00a380k budget; negotiated hotel and venue contracts down to ~50% of market rates and closed with a \u00a330k+ surplus',
+                'Secured \u00a370k+ in sponsorship, up 75% year-on-year, by introducing performance-based partnerships (guaranteed base plus bonus)',
+                'Partnered with Oxford SU, Cambridge\u2019s Chinese student society (CCS) and other Oxford Asian societies to co-host 5 networking, careers and cultural events for 200+ attendees']}
+    ]},
+    {sec:'ADDITIONAL INFORMATION', runons:[
+      'Languages: Mandarin (native), English (fluent)',
+      'Technical: Excel, PowerPoint, Python, MATLAB',
+      'Interests: Tennis (former club vice president), video editing (produced a 1M-view TikTok video), functional training, British rock music (Suede)'
+    ]}
+  ]
+};
+
+function renderOriginal(){
+  let html = `<div class="cvname">${esc(CANDIDATE.name)}</div><div class="cvcontact">${esc(ORIGINAL.contact)}</div>`;
+  ORIGINAL.sections.forEach(g=>{
+    html += `<div class="sec">${esc(g.sec)}</div>`;
+    (g.runons||[]).forEach(t=>{ html += `<p class="runon">${esc(t)}</p>`; });
+    (g.blocks||[]).forEach(b=>{
+      html += `<div class="blk"${b.blk?` data-blk="${b.blk}"`:''}>
+        <div class="blkhead">
+          <div><span class="who">${esc(b.l1)}</span></div>
+          <div class="when">${esc(b.when||'')}</div>
+        </div>
+        ${b.l2?`<div class="origloc">${esc(b.l2)}</div>`:''}`;
+      if(b.bullets){
+        html += '<ul class="bl">' + b.bullets.map(t=>`<li>${esc(t)}</li>`).join('') + '</ul>';
+      }
+      html += '</div>';
+    });
+  });
+  sheet.innerHTML = html;
+  sheet.style.setProperty('--cvsize','10.4pt');
+  rail.innerHTML = '';
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+
+const store = {};                 // key -> value for blanks and write-ins
+const dropped = new Set();        // per-version cut decisions, keyed "version|kind:id"
+
+/* Default cuts \u2014 my recommendation, not a lock. Each one shows struck
+   through in Workshop with a note explaining it, and the \u00d7 puts it back. */
+const DEFAULT_CUT = {
+  consulting:[ 'bul:oxford_1', 'bul:guanghua_2', 'bul:amec_1' ]
+};
+/* ================= CONTENT BLOCK ENDS ================= */
+
+function auditDefaultCuts(){
+  Object.keys(DEFAULT_CUT).forEach(v => DEFAULT_CUT[v].forEach(k => {
+    if(!k.startsWith('blk:')) return;
+    const b = blocks[k.slice(4)];
+    if(b && !b.cutNote && !b.note) console.warn('Default cut with nothing to explain it:', v, k);
+  }));
+}
+function seedDefaultCuts(){
+  Object.keys(DEFAULT_CUT).forEach(v =>
+    DEFAULT_CUT[v].forEach(k => dropped.add(v + '|' + k)));
+}
+let noteSeq = 0;
+const sheet = document.getElementById('sheet');
+const rail  = document.getElementById('rail');
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function blanks(text){
+  return esc(text).replace(/\{\{(\w+)\|([^}]*)\}\}/g, (_,k,ph)=>
+    `<span class="blank" contenteditable="true" spellcheck="false" role="textbox" data-key="${k}" data-ph="${ph}"></span>`);
+}
+
+const notes = [];
+function addNote(n, targetSel, key){
+  if(!n) return '';
+  const id = 'note_' + key.replace(/[^\w]/g,'_');
+  notes.push({id, targetSel, key, ...n});
+  return id;
+}
+
+/* A cut item gets exactly one note \u2014 the one that says why it is cut \u2014
+   and its bullets' notes are suppressed, since that text is no longer on the CV. */
+function visibleNotes(){
+  const cut = k => dropped.has(document.body.dataset.version + '|' + k);
+  return notes.filter(n => {
+    if(n.kind === 'blk')  return true;
+    const parentCut = cut('blk:' + n.owner);
+    return !parentCut;
+  }).map(n => {
+    const isCut = cut(n.kind + ':' + (n.kind==='blk' ? n.owner : n.bul));
+    return (isCut && n.cutNote) ? {...n, h:n.cutNote.h, p:n.cutNote.p, t:'cut'} : n;
+  });
+}
+
+function railLegend(){
+  return `<div class="legend">
+    <span class="c">Change this</span>
+    <span class="f">You fill this in</span>
+    <span class="k">Already working</span>
+  </div>`;
+}
+function noteHTML(n){
+  return `<div class="note ${n.t==='cut'?'cut':n.t==='fill'?'fill':'keep'}" id="${n.id}" data-target='${n.targetSel}'>
+    <h4>${n.h}</h4><p>${n.p}</p></div>`;
+}
+const lit=[];
+function clearLit(){ lit.forEach(e=>e.classList.remove('lit')); lit.length=0; }
+function light(...els){ clearLit(); els.filter(Boolean).forEach(e=>{e.classList.add('lit'); lit.push(e);}); }
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') clearLit(); });
+
+function bindSheetNotes(){
+  sheet.querySelectorAll('[data-note]').forEach(row=>{
+    if(!row.dataset.note) return;
+    row.addEventListener('click', ()=>{
+      const n=document.getElementById(row.dataset.note);
+      if(!n) return;
+      light(row,n); n.scrollIntoView({block:'center',behavior:'smooth'});
+    });
+  });
+}
+function bindRailNotes(){
+  rail.querySelectorAll('.note').forEach(n=>{
+    n.addEventListener('click', ()=>{
+      const t=sheet.querySelector(n.dataset.target);
+      light(n,t); if(t) t.scrollIntoView({block:'center',behavior:'smooth'});
+    });
+  });
+}
+function bindNotes(){ bindSheetNotes(); bindRailNotes(); }
+
+/* the visible note set changes whenever something is cut or restored */
+function refreshRail(){
+  const version = document.body.dataset.version;
+  const targets = versions[version].targets || '';
+  rail.innerHTML = `<p class="railhead">${targets}</p>
+    <div class="standard">
+      <h4>What every bullet has to carry</h4>
+      <ol>
+        <li>A <b>verb you own</b> — wrote, designed, benchmarked, secured. Never attended, observed, assisted, sat in on, was involved in.</li>
+        <li>A <b>number</b>: how many companies, papers, meetings, people, pounds.</li>
+        <li>A <b>person or group</b> you did it with or for — the investment team, leadership, the CEO, patient families, paying customers.</li>
+        <li>A <b>consequence</b>: what someone decided, changed or adopted because of it.</li>
+      </ol>
+      <p>Three of the four is a good bullet. Two is a job description. Not every bullet can carry all four — a purely technical one earns its place on method — but a bullet that stops at what you were given to do is doing nothing for you.</p>
+    </div>
+    <p class="railhead">Click a note to find its line, or a line to find its note. The &times; beside anything leaves it out.</p>`
+    + railLegend() + visibleNotes().map(noteHTML).join('');
+  bindRailNotes();
+}
+
+function render(){
+  if(document.body.dataset.mode === 'orig'){
+    renderOriginal();
+    document.getElementById('fit').textContent = '';
+    document.getElementById('count').textContent = '';
+    return;
+  }
+  renderRewrite();
+}
+
+function renderRewrite(){
+  const version = document.body.dataset.version;
+  const v = versions[version];
+  notes.length = 0; noteSeq = 0;
+
+  let html = `<div class="cvname">${esc(CANDIDATE.name)}</div>
+    <div class="cvcontact">${CANDIDATE.contact}</div>`;
+
+  v.groups.forEach(g=>{
+    html += `<div class="sec">${esc(g.sec)}</div>`;
+
+    if(g.sec === 'Additional'){
+      extras[version].forEach(t=>{ html += `<p class="runon">${esc(t)}</p>`; });
+      return;
+    }
+
+    g.ids.forEach(id=>{
+      const b = blocks[id];
+      if(!b) return;
+
+      if(b.runon){
+        const nid = addNote(b.note, `[data-blk="${id}"]`, 'blk:'+id);
+        if(nid) Object.assign(notes[notes.length-1], {kind:'blk', owner:id, cutNote:b.cutNote});
+        html += `<p class="runon" data-blk="${id}" data-note="${nid||''}">${esc(b.runon)}<button class="drop wsonly" data-cut="${version}|blk:${id}" title="Leave this out">&times;</button></p>`;
+        return;
+      }
+
+      const nid = addNote(b.note, `[data-blk="${id}"]`, 'blk:'+id);
+      if(nid) Object.assign(notes[notes.length-1], {kind:'blk', owner:id, cutNote:b.cutNote});
+      html += `<div class="blk" data-blk="${id}" data-note="${nid||''}">
+        <div class="blkhead">
+          <div><span class="who">${esc(b.who)}</span><span class="role">${esc(b.role||'')}</span><button class="drop wsonly" data-cut="${version}|blk:${id}" title="Leave this role out">&times;</button></div>
+          <div class="when">${blanks(b.when||'')}</div>
+        </div>`;
+
+      // key off the ORIGINAL index so answers and cuts survive a version switch
+      const bl = (b.bullets||[])
+        .map((x,idx)=>({x,idx}))
+        .filter(o=>!o.x.only || o.x.only===version);
+      if(bl.length){
+        html += '<ul class="bl">';
+        bl.forEach(({x,idx})=>{
+          const key = id+'_'+idx;
+          const bnid = addNote(x.note, `[data-bul="${key}"]`, 'bul:'+key);
+          if(bnid) Object.assign(notes[notes.length-1], {kind:'bul', owner:id, bul:key, cutNote:x.cutNote});
+          if(x.mode==='w'){
+            html += `<li class="li-write" data-bul="${key}" data-note="${bnid||''}">
+              <div class="prompt wsonly">${x.quote?`<div class="quote">\u201C${esc(x.quote)}\u201D</div>`:''}${x.prompt}</div>
+              <textarea class="writein wsonly" data-key="${key}" rows="2" placeholder="${esc(x.ph||'')}"></textarea>
+              <span class="written" data-mirror="${key}"></span>
+              <button class="drop wsonly" data-cut="${version}|bul:${key}" title="Leave this bullet out">&times;</button>
+            </li>`;
+          }else{
+            const wasBtn = x.was ? `<button class="wastoggle wsonly" data-for="${key}">was</button>` : '';
+            const wasBox = x.was ? `<div class="was wsonly" id="was_${key}" hidden>\u201C${esc(x.was)}\u201D</div>` : '';
+            html += `<li data-bul="${key}" data-note="${bnid||''}">${blanks(x.text)}${wasBtn}<button class="drop wsonly" data-cut="${version}|bul:${key}" title="Leave this bullet out">&times;</button>${wasBox}</li>`;
+          }
+        });
+        html += '</ul>';
+      }
+      html += '</div>';
+    });
+  });
+
+  sheet.innerHTML = html;
+
+  restore();
+  applyDropped();
+  refreshRail();
+  bindSheetNotes();
+  wire();
+  updateCount();
+  autofit();
+}
+
+/* ---------- state ---------- */
+function applyDropped(){
+  sheet.querySelectorAll('[data-cut]').forEach(btn=>{
+    const t = btn.closest('li') || btn.closest('.runon') || btn.closest('.blk');
+    if(!t) return;
+    const on = dropped.has(btn.dataset.cut);
+    t.classList.toggle('dropped', on);
+    btn.innerHTML = on ? '&#8630;' : '&times;';
+    btn.title = on ? 'Put this back' : (btn.dataset.cut.includes('|blk') ? 'Leave this role out' : 'Leave this bullet out');
+  });
+}
+
+function restore(){
+  sheet.querySelectorAll('.blank').forEach(el=>{
+    const val = store[el.dataset.key];
+    if(val){ el.textContent = val; el.classList.add('filled'); }
+  });
+  sheet.querySelectorAll('.writein').forEach(el=>{
+    if(store[el.dataset.key]){ el.value = store[el.dataset.key]; fit(el); }
+    mirror(el);
+  });
+}
+function fit(t){ t.style.height='auto'; t.style.height = Math.max(t.scrollHeight, 34) + 'px'; }
+function mirror(t){
+  const m = sheet.querySelector(`.written[data-mirror="${t.dataset.key}"]`);
+  if(!m) return;
+  const v = t.value.trim();
+  m.textContent = v;
+  t.closest('li').classList.toggle('empty', !v);
+}
+
+let blanksLeft = 0;
+let fitTimer;
+function queueFit(){ clearTimeout(fitTimer); fitTimer = setTimeout(autofit, 250); }
+
+function updateCount(){
+  const live = el => !el.closest('.dropped');
+  const bs = [...sheet.querySelectorAll('.blank')].filter(live);
+  const ws = [...sheet.querySelectorAll('.writein')].filter(live);
+  const left = bs.filter(b=>!b.textContent.trim()).length + ws.filter(w=>!w.value.trim()).length;
+  blanksLeft = left;
+  const el = document.getElementById('count');
+  el.className = 'count' + (left===0 ? ' done' : '');
+  el.innerHTML = left===0 ? 'Nothing left blank — ready to export' : `<b>${left}</b> still blank`;
+}
+
+/* ---------- interaction ---------- */
+let allOriginals = false;
+
+function wire(){
+  sheet.querySelectorAll('.blank').forEach(el=>{
+    el.addEventListener('input', ()=>{
+      store[el.dataset.key] = el.textContent.trim();
+      el.classList.toggle('filled', !!el.textContent.trim());
+      updateCount(); queueFit();
+    });
+    el.addEventListener('keydown', e=>{
+      if(e.key==='Enter'){ e.preventDefault(); el.blur(); }
+    });
+    el.addEventListener('paste', e=>{
+      e.preventDefault();
+      const t = (e.clipboardData||window.clipboardData).getData('text').replace(/\s+/g,' ');
+      document.execCommand('insertText', false, t);
+    });
+  });
+
+  sheet.querySelectorAll('.writein').forEach(el=>{
+    fit(el);
+    el.addEventListener('input', ()=>{
+      store[el.dataset.key]=el.value; fit(el); mirror(el); updateCount(); queueFit();
+    });
+    mirror(el);
+  });
+
+  sheet.querySelectorAll('.drop').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      e.stopPropagation();
+      const k = btn.dataset.cut;
+      dropped.has(k) ? dropped.delete(k) : dropped.add(k);
+      applyDropped(); refreshRail(); updateCount(); autofit();
+    });
+  });
+
+  sheet.querySelectorAll('.wastoggle').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      e.stopPropagation();
+      const box = document.getElementById('was_'+btn.dataset.for);
+      box.hidden = !box.hidden;
+      btn.textContent = box.hidden ? 'was' : 'hide';
+    });
+  });
+
+  if(allOriginals) toggleAll(true);
+}
+
+function toggleAll(on){
+  sheet.querySelectorAll('.was').forEach(b=>{ b.hidden = !on; });
+  sheet.querySelectorAll('.wastoggle').forEach(b=>{ b.textContent = on ? 'hide' : 'was'; });
+  document.getElementById('showall').textContent = on ? 'Hide all originals' : 'Show all originals';
+}
+
+/* ---------- fit the finished CV onto one A4 page ---------- */
+const MM = 96/25.4;
+const PAGE_H = 297 * MM * 0.91;   // calibrated: print engines reserve more than nominal A4
+
+function autofit(){
+  if(document.body.dataset.mode === 'orig') return true;
+  const prevMode = document.body.dataset.mode;
+  document.body.dataset.mode = 'cv';
+  sheet.classList.add('measuring');
+
+  let size = 10.6, fits = false;
+  for(; size >= 8.6; size -= 0.1){
+    sheet.style.setProperty('--cvsize', size.toFixed(1)+'pt');
+    if(sheet.getBoundingClientRect().height <= PAGE_H){ fits = true; break; }
+  }
+
+  let pages = 1;
+  if(!fits){
+    size = 9.8;
+    sheet.style.setProperty('--cvsize', size.toFixed(1)+'pt');
+    pages = Math.ceil(sheet.getBoundingClientRect().height / PAGE_H);
+  }
+
+  sheet.classList.remove('measuring');
+  document.body.dataset.mode = prevMode;
+
+  const el = document.getElementById('fit');
+  el.className = 'count' + (fits ? '' : ' over');
+  el.innerHTML = fits
+    ? `Fits one page at ${size.toFixed(1)}pt`
+    : `${pages} pages at ${size.toFixed(1)}pt — fine here, not for MBB`;
+  return fits;
+}
+
+/* ---------- toolbar ---------- */
+function setMode(m){
+  const was = document.body.dataset.mode;
+  document.body.dataset.mode = m;
+  document.getElementById('m-orig').setAttribute('aria-pressed', m==='orig');
+  document.getElementById('m-ws').setAttribute('aria-pressed', m==='workshop');
+  document.getElementById('m-cv').setAttribute('aria-pressed', m==='cv');
+  if(was === 'orig' || m === 'orig') render();
+}
+function setVersion(v){
+  document.body.dataset.version = v;
+  document.querySelectorAll('#vseg button').forEach(btn =>
+    btn.setAttribute('aria-pressed', btn.dataset.v === v));
+  render();
+}
+
+function buildVersionButtons(){
+  const keys = Object.keys(versions);
+  document.getElementById('vseg').innerHTML = keys.map(k =>
+    `<button data-v="${k}" aria-pressed="false">${versions[k].label}</button>`).join('');
+  document.querySelectorAll('#vseg button').forEach(btn =>
+    btn.onclick = ()=>setVersion(btn.dataset.v));
+  /* a single version needs no toggle at all */
+  document.getElementById('vseg').style.display = keys.length > 1 ? '' : 'none';
+  return keys[0];
+}
+
+document.getElementById('m-orig').onclick = ()=>setMode('orig');
+document.getElementById('m-ws').onclick = ()=>setMode('workshop');
+document.getElementById('m-cv').onclick = ()=>setMode('cv');
+
+
+
+
+/* Printing is blocked inside sandboxed previews, so detect that and give
+   a working route out instead of failing silently. */
+const framed = (()=>{ try{ return window.self !== window.top; }catch(e){ return true; } })();
+
+const hintEl = document.getElementById('hint');
+function showHint(html){
+  document.getElementById('hintmsg').innerHTML = html;
+  hintEl.hidden = false;
+  hintEl.scrollIntoView({block:'nearest'});
+}
+document.getElementById('hint-x').onclick = ()=>{ hintEl.hidden = true; };
+
+function downloadFilled(){
+  const payload = JSON.stringify({answers:store, cut:[...dropped], version:document.body.dataset.version})
+                    .replace(/<\//g,'<\\/');
+  const tag = '<scr'+'ipt>window.__PRELOAD__='+payload+';</scr'+'ipt>';
+  const src = '<!DOCTYPE html>' + document.documentElement.outerHTML.replace('</head>', tag+'</head>');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([src],{type:'text/html'}));
+  a.download = 'Bruce-Zhang-CV-workshop.html';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+}
+document.getElementById('hint-dl').onclick = downloadFilled;
+document.getElementById('save').onclick = ()=>{
+  downloadFilled();
+  showHint('Saved as <b>Bruce-Zhang-CV-workshop.html</b> with everything you have typed. '
+    + 'Open that file next time and carry on where you left off \u2014 and print from there, '
+    + 'because Export PDF only works outside this preview window.');
+};
+
+document.getElementById('print').onclick = ()=>{
+  setMode('cv');
+  autofit();
+
+  const blanksWarning = blanksLeft > 0
+    ? `<b>${blanksLeft} field${blanksLeft===1?'':'s'} still blank.</b> Those print as empty underlines, and bullets you have not written are left out. `
+    : '';
+
+  if(framed){
+    showHint(blanksWarning +
+      'Printing is blocked inside this preview window. Download a copy below, open it in Chrome, ' +
+      'then hit Export PDF there. In the print dialogue set <b>Margins: None</b> and <b>Scale: 100%</b> \u2014 ' +
+      'the page supplies its own margins, so anything else will crop it.');
+    return;
+  }
+
+  showHint(blanksWarning +
+    'In the print dialogue set <b>Margins: None</b> and <b>Scale: 100%</b>, then choose Save as PDF.');
+  setTimeout(()=>{
+    try{ window.print(); }
+    catch(e){
+      showHint('This browser refused to open the print dialogue. Download a copy below and open it directly.');
+    }
+  }, 120);
+};
+
+document.getElementById('who').textContent = '\u2014 ' + CANDIDATE.name;
+document.title = 'CV workshop \u2014 ' + CANDIDATE.name;
+const firstVersion = buildVersionButtons();
+
+if(!window.__PRELOAD__) seedDefaultCuts();
+auditDefaultCuts();
+
+if(window.__PRELOAD__){
+  Object.assign(store, window.__PRELOAD__.answers || {});
+  (window.__PRELOAD__.cut || []).forEach(k=>dropped.add(k));
+  if(window.__PRELOAD__.version) { setVersion(window.__PRELOAD__.version); }
+  else { setVersion(firstVersion); }
+} else {
+  setVersion(firstVersion);
+}
+</script>
+</body>
+</html>
